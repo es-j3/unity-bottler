@@ -1,0 +1,264 @@
+#!/bin/sh
+
+if [ "$(id -u)" = 0 ]; then
+	echo "Don't run this as root, root will be called once needed."
+	exit 1
+fi
+
+COMMAND="$1"
+PROJECT_DIR="$HOME/.unity-bottler/pfx"
+
+case "$COMMAND" in
+"")
+	if [ ! -d "$PROJECT_DIR" ]; then
+		echo "Looks like unity-bottler isn't installed yet. Install it with 'unity-bottler install'"
+		exit 1
+	fi
+	WINEPREFIX="$PROJECT_DIR" ~/.unity-bottler/proton/local/wine-proton/bin/wine64 "$PROJECT_DIR"/drive_c/Program\ Files/Unity\ 2019.4.40f1/Editor/Unity.exe --no-sandbox
+	;;
+
+"install")
+	if [ -d "$PROJECT_DIR" ]; then
+		if ! zenity --question --text="This appears to be already installed. Continue?"; then
+			exit 0
+		fi
+	fi
+
+	configurator_shortcut() {
+		fetch -o ~ https://raw.githubusercontent.com/es-j3/unity-bottler/refs/heads/main/src/icon.png
+		xdg-icon-resource install --size 256 ~/icon.png unity-bottler-configurator --novendor
+		touch ~/.local/share/applications/unity-bottler-Configurator.desktop
+		chmod +x ~/.local/share/applications/unity-bottler-Configurator.desktop
+		echo "[Desktop Entry]
+                Comment=Launches unity-bottler configurator application
+                Exec=unity-bottler configure
+                Icon=unity-bottler-configurator
+                Categories=Game;
+                Name=unity-bottler Configurator
+                StartupNotify=false
+                Terminal=false
+                TerminalOptions=
+                Type=Application" >~/.local/share/applications/unity-bottler-Configurator.desktop
+		~/icon.png
+	}
+
+	unity_shortcut() {
+		touch ~/.local/share/applications/unity-bottler.desktop
+		chmod +x ~/.local/share/applications/unity-bottler.desktop
+		echo "[Desktop Entry]
+                Comment=Create and grow amazing games across 20+ platforms and billions of devices with our end-to-end tools and services for creation, launch, and beyond.
+                Exec=unity-bottler
+                Icon=unity-editor
+                Categories=Game;
+                Name=Unity Editor
+                StartupNotify=false
+                Terminal=false
+                TerminalOptions=
+                Type=Application" >~/.local/share/applications/unity-bottler.desktop
+	}
+
+	check_install() {
+		su -l root -c 'pkg install wine zenity winetricks'
+		/usr/local/share/wine/pkg32.sh install wine mesa-dri
+	}
+
+	if [ ! -f /tmp/UnitySetup64-2017.4.40f1.exe ] || [ ! -f /tmp/UnitySetup64-2019.4.40f1.exe ]; then
+		zenity --info --text="To get it out of the way, let's download the 2 Unity binaries we will need. Unity 2017.4.40 and Unity 2019.4.40. We will need the 2017 one for signing in, and we will be using the 2019 one, the latest one that works."
+		fetch -o /tmp/UnitySetup64-2017.4.40f1.exe https://download.unity3d.com/download_unity/6e14067f8a9a/Windows64EditorInstaller/UnitySetup64-2017.4.40f1.exe
+		fetch -o /tmp/UnitySetup64-2019.4.40f1.exe https://download.unity3d.com/download_unity/ffc62b691db5/Windows64EditorInstaller/UnitySetup64-2019.4.40f1.exe
+	fi
+
+	if zenity --question --text="Would you like to check that all required dependencies are installed?"; then
+		check_install
+	else
+		zenity --info --text="Alright, let's move on."
+	fi
+
+	zenity --info --text="Let's install DXVK and required fonts for Unity to function properly, along with creating our prefix."
+
+	WINEPREFIX="$PROJECT_DIR" WINE=/usr/local/bin/wine winetricks dxvk corefonts
+
+	zenity --info --text="The next step will install Unity."
+
+	WINEPREFIX="$PROJECT_DIR" /usr/local/bin/wine /tmp/UnitySetup64-2017.4.40f1.exe
+
+	if zenity --question --text="Now, we need to fetch a custom Proton build for Unity (source is on the readme). Press Yes to have the binary fetched, and press No to have it compiled. The choice is yours :)"; then
+		mkdir -p ~/.unity-bottler/
+		fetch -o ~/.unity-bottler/ https://github.com/FreeBSD-Proton-Experimental-Porters/FreeBSD-Proton-Experimental/releases/download/10.0-20250612/wine-proton-e.10.0.20250612-amd64.pkg
+		cd ~/.unity-bottler
+		tar xf wine-proton-e.10.0.20250612-amd64.pkg
+		mv usr proton
+		rm -rf +COMPACT_MANIFEST +MANIFEST wine-proton-e.10.0.20250612-amd64.pkg
+	else
+		zenity --info --text="Okay, here are the instructions for doing so, this cannot be automated due to varying system configs:
+
+mkdir -p ~/.unity-bottler/
+
+fetch -o ~/.unity-bottler/ https://github.com/FreeBSD-Proton-Experimental-Porters/FreeBSD-Proton-Experimental/archive/refs/tags/10.0-20250612.tar.gz
+
+tar xf 10.0-20250612.tar.gz
+
+cd FreeBSD-Proton-Experimental-10.0-20250612/emulators/proton-experimental/
+
+make install clean
+
+make package
+
+Once done, find the .pkg in the build files, put it in the root ~/.unity-bottler, and then run the following:
+
+tar xf wine-proton-e.10.0.20250612-amd64.pkg
+
+mv usr proton
+
+rm -rf +COMPACT_MANIFEST +MANIFEST wine-proton-e.10.0.20250612-amd64.pkg FreeBSD-Proton-Experimental-10.0-20250612 10.0-20250612.tar.gz
+
+...and you're done! Press OK to continue.
+" --width=1000 --height=500
+	fi
+
+	zenity --info --text="Now the next step will be to sign into Unity. Once you confirmed you are signed in and reach the Projects page, close Unity."
+
+	WINEPREFIX="$PROJECT_DIR" ~/.unity-bottler/proton/local/wine-proton/bin/wine64 "$PROJECT_DIR"/drive_c/Program\ Files/Unity/Editor/Unity.exe --no-sandbox
+
+	zenity --info --text="The next step will to install the newer version of Unity!"
+
+	WINEPREFIX="$PROJECT_DIR" /usr/local/bin/wine /tmp/UnitySetup64-2019.4.40f1.exe
+
+	rm -rf ~/.local/share/applications/wine/Programs/Unity\ 2017.4.40f1\ \(64-bit\)/ ~/.local/share/applications/wine/Programs/Unity\ 2019.4.40f1\ \(64-bit\)/
+
+	if zenity --question --text="Would you like to add a shortcut for Unity?"; then
+		unity_shortcut
+	else
+		zenity --info --text="Alright, let's move on."
+	fi
+
+	mkdir -p ~/.local/share/applications
+
+	if zenity --question --text="Would you like to add a shortcut for the unity-bottler Configurator?"; then
+		configurator_shortcut
+	else
+		zenity --info --text="Alright, let's move on."
+	fi
+
+	zenity --info --text="Hello! It appears you have reached the end of the unity-bottler installer. If you experience any issues, please report them at https://github.com/es-j3/unity-bottler/issues. Thanks for using this program!"
+
+	mkdir -p ~/.unity-bottler/Projects
+
+	ln -s ~/.unity-bottler/Projects ~/.unity-bottler/pfx/drive_c/Projects
+
+	rm -rf ~/.local/share/applications/wine/Programs/Unity\ 2017.4.40f1\ \(64-bit\)/ ~/.local/share/applications/wine/Programs/Unity\ 2019.4.40f1\ \(64-bit\)/ ~/.local/share/applications/wine-extension-unity.desktop ~/.local/share/applications/wine-protocol-unityhub.desktop ~/.local/share/applications/wine-protocol-com.unity3d.kharma.desktop ~/.local/share/applications/wine-extension-unitypackage.desktop ~/.local/share/applications/wine-extension-unityhub.desktop
+
+	WINEPREFIX="$PROJECT_DIR" ~/.unity-bottler/proton/local/wine-proton/bin/wine64 ~/.unity-bottler/pfx/drive_c/Program\ Files/Unity\ 2019.4.40f1/Editor/Unity.exe --no-sandbox
+	;;
+
+"configure")
+	if [ ! -d "$PROJECT_DIR" ]; then
+		echo "Looks like unity-bottler isn't installed yet. Install it with 'unity-bottler install'"
+		exit 1
+	fi
+	ICO="$HOME/.local/share/icons/hicolor/256x256/apps/unity-bottler-configurator.png"
+
+	while true; do
+		CHOICE=$(zenity --ok-label="Continue" --cancel-label="Exit" \
+			--list --radiolist --window-icon="$ICO" --height=300 --width=400 \
+			--title="unity-bottler Configurator" \
+			--text="Configure unity-bottler with one of the following options" \
+			--hide-header \
+			--column "Select" --column "Option" \
+			FALSE "Uninstall" \
+			FALSE "Run an EXE" \
+			FALSE "Run Unity 2017.4.40f1" \
+			FALSE "Run winetricks" \
+			FALSE "Kill unity-bottler if it's frozen")
+
+		if [ -z "$CHOICE" ]; then
+			exit 0
+		fi
+
+		case "$CHOICE" in
+		"Uninstall")
+			unity-bottler remove
+			;;
+
+		"Run an EXE")
+			EXECUTABLE=$(zenity --file-selection --title="Choose an executable to run")
+			if [ -n "$EXECUTABLE" ]; then
+				WINEPREFIX="$PROJECT_DIR" /usr/local/bin/wine "$EXECUTABLE" --no-sandbox
+			fi
+			;;
+
+		"Run Unity 2017.4.40f1")
+			WINEPREFIX="$PROJECT_DIR" ~/.unity-bottler/proton/local/wine-proton/bin/wine64 "$PROJECT_DIR"/drive_c/Program\ Files/Unity/Editor/Unity.exe --no-sandbox
+			;;
+
+		"Run winetricks")
+			WINEPREFIX="$PROJECT_DIR" WINE=/usr/local/bin/wine winetricks
+			;;
+
+		"Kill unity-bottler if it's frozen")
+			pkill -f "wineserver"
+			pkill -f "system32"
+			pkill -f "Unity"
+			pkill -f "UnityHelper"
+			pkill -f "upm-win"
+			pkill -f "Unity.exe"
+			pkill -f "VBCS"
+			;;
+		esac
+	done
+	;;
+"remove")
+	if [ ! -d "$PROJECT_DIR" ]; then
+		zenity --info --text="Maybe it was never installed in the first place."
+		exit 0
+	fi
+
+	remove_shortcuts() {
+		echo "Removing shortcuts..."
+		rm -rf ~/.local/share/applications/unity-bottler.desktop ~/.local/share/applications/unity-bottler-Configurator.desktop
+	}
+
+	remove_data() {
+		echo "Removing all Unity data..."
+		rm -rf ~/.unity-bottler
+	}
+
+	if zenity --question --text="Are you sure you want to uninstall unity-bottler? Starting with removing app shortcuts."; then
+		remove_shortcuts
+	else
+		zenity --info --text="Uninstallation canceled."
+	fi
+
+	if zenity --question --text="Now, remove all Unity data?"; then
+		remove_data
+	else
+		sleep 1
+	fi
+
+	if zenity --question --text="Now finally, would you like to remove the unity-bottler application?"; then
+		su -l root -c 'pkg remove unity-bottler'
+	else
+		sleep 1
+	fi
+	;;
+
+"winetricks")
+	WINEPREFIX="$PROJECT_DIR" WINE=/usr/local/wine-proton/bin/wine winetricks
+	;;
+
+"kill")
+	pkill -f "wineserver"
+	pkill -f "system32"
+	pkill -f "Unity"
+	pkill -f "UnityHelper"
+	pkill -f "upm-win"
+	pkill -f "Unity.exe"
+	pkill -f "VBCS"
+	;;
+
+*)
+	echo "unity-bottler (run this plain to launch Unity) [install|configure|remove]"
+	echo "Some other miscellaneous options include [winetricks|kill]"
+	exit 1
+	;;
+esac
