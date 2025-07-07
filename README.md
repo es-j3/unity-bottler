@@ -10,12 +10,12 @@ Want to know more? Feel free to look at the source (It's quite basic).
 
 ```fetch https://github.com/es-j3/unity-bottler/releases/download/1.0.0/unity-bottler-1.0.0.pkg```
 
-```pkg install ./steam-bottler-1.0.0.pkg```
+```pkg install ./unity-bottler-1.0.0.pkg```
 
 ```unity-bottler install```
 
 ### Uninstallation
-```steam-bottler remove```
+```unity-bottler remove```
 
 ### Extras
 [Check out steam-bottler :D](https://github.com/es-j3/steam-bottler)
