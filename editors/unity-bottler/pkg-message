@@ -1,0 +1,17 @@
+To setup a wine bottle with a complete Unity runtime, run:
+
+unity-bottler install
+
+To then run Unity, execute:
+
+unity-bottler
+
+To remove the wine bottle, run:
+
+unity-bottler remove
+
+To configure the wine bottle, run:
+
+unity-bottler configure
+
+Note: If you ever get signed out, go to unity-bottler configure < Run Unity 2017.4.40f1 to get signed in again.
