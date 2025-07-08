@@ -10,7 +10,7 @@ Want to know more? Feel free to look at the source (It's quite basic).
 
 ```fetch https://github.com/es-j3/unity-bottler/releases/download/1.0.0/unity-bottler-1.0.0.pkg```
 
-```pkg install ./unity-bottler-1.0.0.pkg```
+```pkg install ./unity-bottler-1.0.0.pkg mesa-devel```
 
 ```unity-bottler install```
 
