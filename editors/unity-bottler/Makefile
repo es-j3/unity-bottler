@@ -4,7 +4,7 @@ CATEGORIES=     games
 MASTER_SITES=   https://github.com/es-j3/${PORTNAME}/archive/${PORTVERSION}${EXTRACT_SUFX}?dummy=/
 
 MAINTAINER=     alexander.nogal@proton.me
-COMMENT=        Unity 2019.4.40f1 in a custom wine-proton bottle on FreeBSD 
+COMMENT=        Unity 2019.4.40f1 in a custom wine-proton bottle on FreeBSD
 WWW=            https://github.com/es-j3/unity-bottler
 
 LICENSE=        BSD2CLAUSE
